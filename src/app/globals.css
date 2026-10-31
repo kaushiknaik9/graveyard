@@ -2,9 +2,6 @@
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
-  --color-background: #fafbfc;
-  --color-foreground: #111210;
-  --color-muted-foreground: #6b7280;
-  --color-border: #e5e7eb;
-  --color-card: #ffffff;
+  --color-background: #09090b;
+  --color-foreground: #fafafc;
 }
