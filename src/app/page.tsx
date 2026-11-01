@@ -1,60 +1,80 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-  Camera, MapPin, ThumbsUp, Share2, Sparkles, Navigation,
-  Clock, CheckCircle2, Wrench, Eye, X, ChevronUp, AlertTriangle,
-  Loader2, ShieldAlert
+  Camera,
+  MapPin,
+  Sparkles,
+  Navigation,
+  CheckCircle2,
+  X,
+  ShieldAlert,
+  Layers,
+  LayoutGrid,
+  Map,
+  Plus,
+  Compass,
+  Building2,
+  Radio,
+  Clock,
+  ArrowUpRight,
+  TrendingUp,
+  AlertCircle,
+  Activity,
+  Filter,
+  User as UserIcon,
+  ShieldCheck,
 } from 'lucide-react';
-import SeverityBadge from '@/components/SeverityBadge';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { timeAgo, formatCoords, googleMapsUrl } from '@/lib/utils';
-import type { Report, ReportStatus } from '@/types';
+import CameraCaptureModal from '@/components/CameraCaptureModal';
+import ReportCard from '@/components/ReportCard';
+import HazardMap from '@/components/HazardMap';
+import type { Report } from '@/types';
 
-/* ───────────────────────────── Analysis Steps ───────────────────────────── */
-const ANALYSIS_STEPS = [
-  { label: 'Locking GPS Coordinates…', icon: Navigation },
-  { label: 'Uploading High-Res Snapshot…', icon: Camera },
-  { label: 'Gemini Vision Analyzing Asphalt Severity…', icon: Sparkles },
-];
+type FilterTab = 'all' | 'Severe' | 'Pending' | 'Repaired';
 
-/* ───────────────────────────── Status Icons ──────────────────────────────── */
-function StatusBadge({ status }: { status: ReportStatus }) {
-  const cfg: Record<ReportStatus, { bg: string; text: string; border: string; label: string; Icon: typeof Clock }> = {
-    Pending:       { bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500/20',   label: 'Pending Inspection', Icon: Clock },
-    Acknowledged:  { bg: 'bg-blue-500/10',    text: 'text-blue-400',    border: 'border-blue-500/20',    label: 'Acknowledged',       Icon: Eye },
-    'In Progress': { bg: 'bg-indigo-500/10',  text: 'text-indigo-400',  border: 'border-indigo-500/20',  label: 'Work Order Issued',  Icon: Wrench },
-    Repaired:      { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', label: 'Repaired',           Icon: CheckCircle2 },
-  };
-  const c = cfg[status] || cfg.Pending;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${c.bg} ${c.text} ${c.border}`}>
-      <c.Icon size={10} />
-      {c.label}
-    </span>
-  );
-}
-
-/* ───────────────────────────── Placeholder SVG ──────────────────────────── */
-const PLACEHOLDER_SVG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect fill="#18181b" width="400" height="500"/><text x="200" y="260" text-anchor="middle" fill="#3f3f46" font-family="system-ui" font-size="14">Image unavailable</text></svg>')}`;
-
-/* ───────────────────────────── Main Page ─────────────────────────────────── */
 export default function Home() {
-  const { user, session, role } = useAuth();
+  const router = useRouter();
+  const { user, session, role, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
-  const [verifying, setVerifying] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState(0);
-  const [showNote, setShowNote] = useState(false);
-  const [note, setNote] = useState('');
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingCoords, setPendingCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [viewMode, setViewMode] = useState<'feed' | 'map'>('feed');
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
+
+  // Enforce authentication: unauthenticated users cannot access feed
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/auth');
+    }
+  }, [user, authLoading, router]);
+
+  // Modal & Verification states
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionStep, setSubmissionStep] = useState<string | null>(null);
+
+  // Overlays & Notifications
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [unauthorizedNotice, setUnauthorizedNotice] = useState(false);
+
+  // Single-vote citizen tracking
   const [userVotedIds, setUserVotedIds] = useState<Set<string>>(new Set());
-  const fileRef = useRef<HTMLInputElement>(null);
+
+  /* ── Check for unauthorized redirect query param ── */
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('unauthorized') === 'gov') {
+        setUnauthorizedNotice(true);
+        window.history.replaceState({}, '', '/');
+      }
+    }
+  }, []);
 
   /* ── Fetch which reports the current logged-in citizen has already confirmed ── */
   useEffect(() => {
@@ -74,19 +94,7 @@ export default function Home() {
       });
   }, [user]);
 
-  /* ── Check for unauthorized redirect query param ── */
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('unauthorized') === 'gov') {
-        setUnauthorizedNotice(true);
-        // Clean URL without refresh
-        window.history.replaceState({}, '', '/');
-      }
-    }
-  }, []);
-
-  /* ── Fetch reports from Supabase ── */
+  /* ── Fetch reports from Supabase with API fallback ── */
   const fetchReports = useCallback(async () => {
     try {
       const { data, error: fetchErr } = await supabase
@@ -97,7 +105,15 @@ export default function Home() {
       if (!fetchErr && data) {
         setPosts(data as Report[]);
       } else {
-        setPosts([]);
+        const res = await fetch('/api/reports', {
+          headers: { 'x-forge-client': 'forge-next-frontend-v1' },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setPosts(json.reports || []);
+        } else {
+          setPosts([]);
+        }
       }
     } catch {
       setPosts([]);
@@ -109,9 +125,9 @@ export default function Home() {
   useEffect(() => {
     fetchReports();
 
-    // Real-time subscription for live updates
+    // Live Real-time subscription
     const channel = supabase
-      .channel('reports-realtime')
+      .channel('reports-realtime-feed')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
         fetchReports();
       })
@@ -122,64 +138,28 @@ export default function Home() {
     };
   }, [fetchReports]);
 
-  /* ── Handle file selection ── */
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check if user is authenticated
-    if (!user) {
-      setError('Please sign in to report a road hazard.');
-      window.location.href = '/auth';
-      return;
-    }
-
-    setError(null);
-    setVerifying(true);
-    setAnalysisStep(0);
-
-    // Step 1: Get GPS
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setPendingCoords({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
-        });
-        setPendingFile(file);
-        setAnalysisStep(1);
-
-        // Auto-submit or show note input
-        setShowNote(true);
-      },
-      (geoErr) => {
-        console.error('[Geo Error]', geoErr);
-        setError('Unable to get your location. Please enable Location Services and try again.');
-        setVerifying(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-
-    // Reset the file input so same file can be re-selected
-    e.target.value = '';
-  };
-
-  /* ── Submit the report ── */
-  const submitReport = async () => {
-    if (!pendingFile || !pendingCoords) return;
-
-    setShowNote(false);
-    setAnalysisStep(2);
+  /* ── Submit New Report from CameraCaptureModal ── */
+  const handleSubmitReport = async (
+    file: File,
+    coords: { lat: number; lng: number; accuracy: number },
+    note: string
+  ) => {
+    setIsSubmitting(true);
+    setSubmissionStep('Locating street address & nearest municipal ward…');
 
     try {
       const formData = new FormData();
-      formData.append('image', pendingFile);
-      formData.append('latitude', pendingCoords.lat.toString());
-      formData.append('longitude', pendingCoords.lng.toString());
-      formData.append('accuracy', pendingCoords.accuracy.toString());
+      formData.append('image', file);
+      formData.append('latitude', coords.lat.toString());
+      formData.append('longitude', coords.lng.toString());
+      formData.append('accuracy', coords.accuracy.toString());
       if (note.trim()) formData.append('note', note.trim());
 
-      const headers: Record<string, string> = {};
+      setSubmissionStep('Analyzing road damage & verifying hazard…');
+
+      const headers: Record<string, string> = {
+        'x-forge-client': 'forge-next-frontend-v1',
+      };
       if (session?.access_token) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
@@ -193,27 +173,36 @@ export default function Home() {
       const result = await res.json();
 
       if (!res.ok) {
-        setError(result.error || 'Failed to verify. Please try again.');
-        setVerifying(false);
+        setError(result.error || 'Verification failed. Please ensure photo shows an actual road hazard.');
+        setIsSubmitting(false);
+        setSubmissionStep(null);
         return;
       }
 
-      // Prepend report immediately so it displays instantly
+      setSubmissionStep('Routing report to nearest Municipal Division…');
+
       if (result.report) {
         setPosts((prev) => [result.report, ...prev.filter((p) => p.id !== result.report.id)]);
       }
 
-      // Success — refresh feed
       await fetchReports();
-      setNote('');
-      setPendingFile(null);
-      setPendingCoords(null);
-      setVerifying(false);
-    } catch (err) {
-      console.error('[Submit Error]', err);
-      setError('Network error. Please check your connection and try again.');
-      setVerifying(false);
+      setIsCameraModalOpen(false);
+      setSuccessToast(`Hazard alert published! Routed to ${result.report?.ward || 'Nearest Municipal Road Division'}.`);
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch (err: any) {
+      console.error('[Publish Error]', err);
+      setError('Network communication failed. Please check connection and try again.');
+    } finally {
+      setIsSubmitting(false);
+      setSubmissionStep(null);
     }
+  };
+
+  /* ── Boost / Confirm Existing Hazard within 25m ── */
+  const handleBoostExisting = async (reportId: string) => {
+    await handleUpvote(reportId);
+    setSuccessToast('✓ Nearby hazard boosted! Your confirmation has raised its dispatch priority.');
+    setTimeout(() => setSuccessToast(null), 5000);
   };
 
   /* ── Upvote / Confirm a report (Strictly 1 vote per citizen) ── */
@@ -229,7 +218,9 @@ export default function Home() {
     }
 
     try {
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'x-forge-client': 'forge-next-frontend-v1',
+      };
       if (session?.access_token) {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
@@ -242,13 +233,13 @@ export default function Home() {
       const json = await res.json();
 
       if (res.ok) {
-        setUserVotedIds(prev => new Set(prev).add(reportId));
-        setPosts(prev =>
-          prev.map(p => p.id === reportId ? { ...p, upvotes: (p.upvotes || 0) + 1 } : p)
+        setUserVotedIds((prev) => new Set(prev).add(reportId));
+        setPosts((prev) =>
+          prev.map((p) => (p.id === reportId ? { ...p, upvotes: (p.upvotes || 0) + 1 } : p))
         );
       } else {
         if (res.status === 409) {
-          setUserVotedIds(prev => new Set(prev).add(reportId));
+          setUserVotedIds((prev) => new Set(prev).add(reportId));
         }
         if (json.error) setError(json.error);
       }
@@ -257,350 +248,464 @@ export default function Home() {
     }
   };
 
-  /* ── Share ── */
-  const handleShare = async (report: Report) => {
-    const url = googleMapsUrl(report.latitude, report.longitude);
-    const text = `🚨 Road hazard reported: ${report.severity} severity at ${formatCoords(report.latitude, report.longitude)}`;
+  /* ── Computed Live Bento KPIs ── */
+  const kpis = useMemo(() => {
+    const total = posts.length;
+    const severe = posts.filter((p) => p.severity === 'Severe').length;
+    const inProgress = posts.filter((p) => p.status === 'In Progress' || p.status === 'Acknowledged').length;
+    const repaired = posts.filter((p) => p.status === 'Repaired').length;
+    const resolutionRate = total > 0 ? Math.round((repaired / total) * 100) : 0;
+    const unresolved = total - repaired;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Forge Civic Alert', text, url });
-      } catch {
-        // User cancelled
-      }
-    } else {
-      await navigator.clipboard.writeText(`${text}\n${url}`);
-    }
-  };
+    return { total, severe, inProgress, repaired, resolutionRate, unresolved };
+  }, [posts]);
+
+  /* ── Filtered Posts ── */
+  const filteredPosts = useMemo(() => {
+    if (activeFilter === 'all') return posts;
+    if (activeFilter === 'Severe') return posts.filter((p) => p.severity === 'Severe');
+    if (activeFilter === 'Pending') return posts.filter((p) => p.status === 'Pending');
+    if (activeFilter === 'Repaired') return posts.filter((p) => p.status === 'Repaired');
+    return posts;
+  }, [posts, activeFilter]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-canvas)] flex items-center justify-center p-4">
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 rounded-full border-2 border-[#F7D10C] border-t-transparent animate-spin mx-auto" />
+          <p className="font-mono text-xs text-[var(--text-secondary)]">Authenticating Civic Access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white font-sans selection:bg-lime-400/30">
-      {/* ── Unauthorized Alert Toast ── */}
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans">
+      {/* ── Notification Toasts ── */}
       {unauthorizedNotice && (
-        <div className="sticky top-14 z-40 max-w-md mx-auto px-3 pt-3 animate-slide-up">
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-lg shadow-amber-500/5">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-full px-4 animate-slide-up">
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs flex items-center justify-between gap-3 shadow-xl backdrop-blur-md">
             <div className="flex items-center gap-2">
-              <ShieldAlert size={16} className="text-amber-400 shrink-0" />
-              <span>Restricted Area: Municipal Official credentials are required to access the Government Inbox.</span>
+              <ShieldAlert size={16} className="shrink-0" />
+              <span>Municipal Official credentials are required for the Command Center.</span>
             </div>
-            <button
-              onClick={() => setUnauthorizedNotice(false)}
-              className="text-amber-400 hover:text-white"
-            >
+            <button onClick={() => setUnauthorizedNotice(false)} className="hover:text-white cursor-pointer">
               <X size={14} />
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Floating Action Button ── */}
-      <button
-        onClick={() => {
-          if (!user) {
-            window.location.href = '/auth';
-            return;
-          }
-          fileRef.current?.click();
-        }}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl bg-gradient-to-br from-lime-400 to-emerald-500 text-black flex items-center justify-center shadow-2xl shadow-lime-400/30 hover:scale-110 active:scale-95 transition-all md:hidden"
-        aria-label="Report hazard"
-      >
-        <Camera size={22} />
-      </button>
-
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        ref={fileRef}
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-
-      {/* ── Analysis Overlay ── */}
-      {verifying && !showNote && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center animate-fade-in">
-          <div className="text-center px-6">
-            {/* Radar animation */}
-            <div className="relative w-24 h-24 mx-auto mb-8">
-              <div className="absolute inset-0 rounded-full border-2 border-lime-400/20" />
-              <div className="absolute inset-2 rounded-full border-2 border-lime-400/10" />
-              <div className="absolute inset-4 rounded-full border-2 border-lime-400/5" />
-              <div className="absolute inset-0 rounded-full border-t-2 border-lime-400 animate-radar" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles size={24} className="text-lime-400 animate-pulse-glow" />
-              </div>
+      {successToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-full px-4 animate-slide-up">
+          <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-emerald-500/40 text-[var(--text-primary)] text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+              <span className="font-medium">{successToast}</span>
             </div>
-
-            {/* Steps */}
-            <div className="space-y-3">
-              {ANALYSIS_STEPS.map((step, i) => {
-                const StepIcon = step.icon;
-                const isActive = i === analysisStep;
-                const isDone = i < analysisStep;
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-3 transition-all duration-500 ${
-                      isDone ? 'opacity-40' : isActive ? 'opacity-100' : 'opacity-20'
-                    }`}
-                  >
-                    {isDone ? (
-                      <CheckCircle2 size={16} className="text-lime-400" />
-                    ) : isActive ? (
-                      <StepIcon size={16} className="text-lime-400 animate-pulse" />
-                    ) : (
-                      <StepIcon size={16} className="text-zinc-600" />
-                    )}
-                    <span className={`text-sm ${isActive ? 'text-lime-300 font-medium' : 'text-zinc-500'}`}>
-                      {step.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Note Input Overlay ── */}
-      {showNote && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center animate-fade-in">
-          <div className="w-full max-w-md bg-[#121212] border border-[#27272a] rounded-t-2xl sm:rounded-2xl p-6 animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">Almost done!</h3>
-              <button
-                onClick={() => { setShowNote(false); setVerifying(false); setPendingFile(null); }}
-                className="text-zinc-500 hover:text-white transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {pendingCoords && (
-              <div className="flex items-center gap-2 mb-4 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                <MapPin size={14} className="text-emerald-400" />
-                <span className="text-xs text-emerald-300 font-medium">
-                  📍 {formatCoords(pendingCoords.lat, pendingCoords.lng)}
-                </span>
-              </div>
-            )}
-
-            <textarea
-              placeholder="Add a note (optional) — e.g., 'Near the bus stop, very deep'"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              maxLength={200}
-              rows={2}
-              className="w-full px-4 py-3 rounded-xl bg-[#09090b] border border-[#27272a] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400/30 resize-none mb-4"
-            />
-
-            <button
-              onClick={submitReport}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-lime-400 to-emerald-500 text-black font-extrabold text-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-lime-400/20 flex items-center justify-center gap-2"
-            >
-              <ChevronUp size={16} />
-              Publish Alert
+            <button onClick={() => setSuccessToast(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer">
+              <X size={14} />
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Image Zoom Modal ── */}
+      {error && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-full px-4 animate-slide-up">
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-xs flex items-center justify-between gap-3 shadow-2xl backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <ShieldAlert size={16} className="shrink-0" />
+              <span className="font-medium">{error}</span>
+            </div>
+            <button onClick={() => setError(null)} className="hover:text-red-400 cursor-pointer">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Fullscreen Submission Radar Overlay ── */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center animate-fade-in p-6">
+          <div className="text-center max-w-sm">
+            <div className="relative w-20 h-20 mx-auto mb-5">
+              <div className="absolute inset-0 rounded-full border-2 border-[#F7D10C]/20" />
+              <div className="absolute inset-0 rounded-full border-t-2 border-[#F7D10C] animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sparkles size={22} className="text-[#F7D10C] animate-pulse" />
+              </div>
+            </div>
+            <h3 className="text-sm font-bold text-white mb-1.5 font-mono">VERIFYING ROAD HAZARD</h3>
+            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+              {submissionStep}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3-COLUMN ENTERPRISE COMMAND SHELL (12-Col Grid) ── */}
+      <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-4rem)]">
+        {/* ============================================================== */}
+        {/* COLUMN 1: LEFT NAVIGATION & TELEMETRY RAIL (col-span-3)        */}
+        {/* ============================================================== */}
+        <aside className="hidden lg:flex lg:col-span-3 flex-col justify-between border-r border-[var(--border-subtle)] p-6 sticky top-16 h-[calc(100vh-4rem)] bg-[var(--bg-canvas)]">
+          <div className="space-y-5">
+            {/* Logo Brand Header */}
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+              <img src="/Logo.png" alt="Forge Logo" className="w-10 h-10 rounded-xl object-contain bg-[var(--bg-elevated)] p-1 border border-[var(--border-subtle)]" />
+              <div>
+                <h3 className="text-xs font-extrabold text-[var(--text-primary)] tracking-tight">Civic Road Safety</h3>
+                <p className="font-mono text-[10px] text-[var(--text-muted)]">Real-Time Municipal Dispatch</p>
+              </div>
+            </div>
+
+            {/* Primary Action Button - CITIZEN ONLY */}
+            {role === 'citizen' ? (
+              <button
+                type="button"
+                onClick={() => setIsCameraModalOpen(true)}
+                className="w-full bg-[#F7D10C] text-[#09090b] font-bold py-3 px-4 rounded-xl shadow-sm hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer text-xs uppercase tracking-wider font-mono"
+              >
+                <Plus size={16} strokeWidth={3} />
+                <span>Report Road Hazard</span>
+              </button>
+            ) : (
+              <div className="p-3 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs font-mono text-[var(--text-secondary)] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#F7D10C]" />
+                <span className="font-bold text-[var(--text-primary)]">Municipal Inspector Mode</span>
+              </div>
+            )}
+
+            {/* Navigation Menu Rail */}
+            <nav className="space-y-1">
+              <button
+                type="button"
+                onClick={() => setViewMode('feed')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'feed'
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold border-l-2 border-[#F7D10C]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <LayoutGrid size={15} />
+                  <span>Live Civic Feed</span>
+                </div>
+                <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                  {posts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode('map')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === 'map'
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold border-l-2 border-[#F7D10C]'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Map size={15} />
+                  <span>Geospatial Radar</span>
+                </div>
+                <span className="w-2 h-2 rounded-full bg-[#F7D10C]" />
+              </button>
+
+              {/* MUNICIPAL DASHBOARD LINK - GOV ONLY (Hidden from citizens) */}
+              {role === 'gov' && (
+                <Link
+                  href="/gov"
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Building2 size={15} />
+                    <span>Municipal Dashboard</span>
+                  </div>
+                  {kpis.unresolved > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-500 font-mono text-[10px] font-bold border border-amber-500/20">
+                      {kpis.unresolved} active
+                    </span>
+                  )}
+                </Link>
+              )}
+            </nav>
+
+            {/* Authenticated Account Status */}
+            <div className="pt-2 border-t border-[var(--border-subtle)]">
+              <div className="p-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] flex items-center justify-center font-mono font-bold text-xs text-[var(--text-primary)]">
+                  {(user.email?.[0] || 'U').toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-xs font-bold text-[var(--text-primary)] block truncate">
+                    {user.user_metadata?.user_name || user.email?.split('@')[0] || 'User'}
+                  </span>
+                  <span className="font-mono text-[10px] text-[var(--text-muted)] block truncate">
+                    {role === 'gov' ? 'Municipal Official' : 'Verified Citizen'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Citizen Action Guide */}
+          <div className="p-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                CITIZEN ACTION
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F7D10C] animate-pulse" />
+            </div>
+            <h4 className="text-xs font-bold text-[var(--text-primary)]">
+              Report & Track Road Hazards
+            </h4>
+            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              Capture potholes and road damage. Community confirmations escalate urgent repairs directly to active municipal repair crews.
+            </p>
+          </div>
+        </aside>
+
+        {/* ============================================================== */}
+        {/* COLUMN 2: CENTER FEED & MAP VIEWPORT (col-span-6)              */}
+        {/* ============================================================== */}
+        <main className="col-span-1 lg:col-span-6 border-r border-[var(--border-subtle)] min-h-screen flex flex-col">
+          {/* Sticky Sub-Header: Segmented View Switcher & Filter Chips */}
+          <div className="sticky top-16 z-20 backdrop-blur-xl bg-[var(--bg-canvas)]/85 border-b border-[var(--border-subtle)] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            {/* Sliding Pill View Switcher */}
+            <div className="flex p-0.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setViewMode('feed')}
+                className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                  viewMode === 'feed'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                Feed Stream
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('map')}
+                className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                  viewMode === 'map'
+                    ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                Live Radar Map
+              </button>
+            </div>
+
+            {/* Severity Filter Chips */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs font-mono">
+              {(
+                [
+                  { id: 'all', label: 'All' },
+                  { id: 'Severe', label: 'Severe' },
+                  { id: 'Pending', label: 'Pending' },
+                  { id: 'Repaired', label: 'Repaired' },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveFilter(tab.id)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                    activeFilter === tab.id
+                      ? 'bg-[var(--text-primary)] text-[var(--bg-canvas)] font-bold'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* View Container */}
+          <div className="p-4 sm:p-5 flex-1">
+            {viewMode === 'map' ? (
+              <div className="animate-fade-in">
+                <HazardMap
+                  reports={filteredPosts}
+                  onUpvote={handleUpvote}
+                  userVotedIds={userVotedIds}
+                />
+              </div>
+            ) : (
+              <div className="space-y-5 animate-fade-in">
+                {loading ? (
+                  <div className="space-y-4">
+                    {[1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="h-80 rounded-2xl bg-[var(--bg-elevated)] animate-pulse border border-[var(--border-subtle)]"
+                      />
+                    ))}
+                  </div>
+                ) : filteredPosts.length === 0 ? (
+                  <div className="p-12 text-center rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+                    <div className="w-12 h-12 rounded-xl bg-[var(--bg-elevated)] text-[var(--text-muted)] flex items-center justify-center mx-auto mb-3">
+                      <Camera size={22} />
+                    </div>
+                    <h3 className="text-sm font-bold text-[var(--text-primary)] font-mono">
+                      No Incidents Found
+                    </h3>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xs mx-auto">
+                      All roads are clear or match no filters in this zone. Capture asphalt damage to alert municipal dispatch.
+                    </p>
+                    {role === 'citizen' && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCameraModalOpen(true)}
+                        className="mt-4 px-4 py-2 rounded-xl bg-[#F7D10C] text-[#09090b] text-xs font-bold font-mono hover:brightness-105 transition cursor-pointer"
+                      >
+                        + Snap Pothole
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredPosts.map((post) => (
+                    <ReportCard
+                      key={post.id}
+                      report={post}
+                      onUpvote={handleUpvote}
+                      hasVoted={userVotedIds.has(post.id)}
+                      onZoomImage={(url) => setZoomImage(url)}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* ============================================================== */}
+        {/* COLUMN 3: RIGHT CIVIC INTELLIGENCE PANEL (col-span-3)          */}
+        {/* ============================================================== */}
+        <aside className="hidden lg:flex lg:col-span-3 flex-col gap-5 p-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto bg-[var(--bg-canvas)]">
+          {/* 2x2 Bento KPI Grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+              <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase block mb-1">
+                Total Reported
+              </span>
+              <span className="font-mono text-2xl font-bold text-[var(--text-primary)]">
+                {kpis.total}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase">
+                  Severe
+                </span>
+              </div>
+              <span className="font-mono text-2xl font-bold text-red-500">
+                {kpis.severe}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase">
+                  Dispatched
+                </span>
+              </div>
+              <span className="font-mono text-2xl font-bold text-amber-500">
+                {kpis.inProgress}
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="font-mono text-[10px] text-[var(--text-muted)] uppercase">
+                  Repaired
+                </span>
+              </div>
+              <span className="font-mono text-2xl font-bold text-emerald-500">
+                {kpis.resolutionRate}%
+              </span>
+            </div>
+          </div>
+
+          {/* Mini-Radar Map Preview */}
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] overflow-hidden">
+            <div className="p-3 border-b border-[var(--border-subtle)] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity size={13} className="text-[#F7D10C]" />
+                <span className="font-mono text-xs font-bold text-[var(--text-primary)]">
+                  Live Radar Grid
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewMode('map')}
+                className="font-mono text-[11px] text-[#F7D10C] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Expand ↗</span>
+              </button>
+            </div>
+            <div className="h-[180px] w-full bg-zinc-950 relative">
+              <iframe
+                title="Mini Map Preview"
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                scrolling="no"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=75.07%2C15.34%2C75.17%2C15.42&layer=mapnik`}
+                className="w-full h-full filter contrast-125 brightness-90 pointer-events-none"
+              />
+            </div>
+          </div>
+
+          {/* Community Action Card */}
+          <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-primary)]">
+              <TrendingUp size={14} className="text-[#F7D10C]" />
+              <span>How Citizen Voting Works</span>
+            </div>
+            <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+              Every citizen who sees a pothole can tap &quot;+1 Confirm Hazard&quot;. Verified reports with more confirmations are escalated to the top of the municipal repair queue.
+            </p>
+          </div>
+        </aside>
+      </div>
+
+      {/* ── Camera Capture Modal ── */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onSubmit={handleSubmitReport}
+        onBoostExisting={handleBoostExisting}
+        existingReports={posts}
+      />
+
+      {/* ── High-Res Image Zoom Modal ── */}
       {zoomImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in cursor-zoom-out"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in cursor-zoom-out"
           onClick={() => setZoomImage(null)}
         >
           <img
             src={zoomImage}
-            alt="Zoomed hazard"
-            className="max-w-full max-h-full rounded-xl object-contain"
-            onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_SVG; }}
+            alt="Zoomed Road Hazard"
+            className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl"
           />
           <button
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 backdrop-blur flex items-center justify-center text-white hover:bg-white/20 transition"
             onClick={() => setZoomImage(null)}
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
       )}
-
-      {/* ── Error Toast ── */}
-      {error && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-md w-full px-4 animate-slide-up">
-          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur flex items-center gap-3">
-            <AlertTriangle size={16} className="text-red-400 shrink-0" />
-            <p className="text-xs text-red-300 flex-1">{error}</p>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-300">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Main Feed ── */}
-      <main className="max-w-md mx-auto px-3 pt-4 pb-24">
-        {/* Desktop snap button */}
-        <div className="hidden md:flex justify-end mb-4">
-          <button
-            onClick={() => {
-              if (!user) {
-                window.location.href = '/auth';
-                return;
-              }
-              fileRef.current?.click();
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-lime-400 to-emerald-500 text-black font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg shadow-lime-400/20"
-          >
-            <Camera size={16} />
-            Snap Pothole
-          </button>
-        </div>
-
-        {/* Loading */}
-        {loading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={24} className="text-lime-400 animate-spin" />
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && posts.length === 0 && (
-          <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-800/50 flex items-center justify-center mx-auto mb-4">
-              <Camera size={28} className="text-zinc-600" />
-            </div>
-            <h3 className="text-lg font-bold text-zinc-400 mb-1">No reports yet</h3>
-            <p className="text-sm text-zinc-600 mb-6">Be the first to report a road hazard in your area.</p>
-            <button
-              onClick={() => {
-                if (!user) {
-                  window.location.href = '/auth';
-                  return;
-                }
-                fileRef.current?.click();
-              }}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-lime-400 to-emerald-500 text-black font-bold text-sm hover:scale-105 transition shadow-lg shadow-lime-400/20"
-            >
-              + Snap a Pothole
-            </button>
-          </div>
-        )}
-
-        {/* Post Cards */}
-        <div className="space-y-6">
-          {posts.map((post) => (
-            <article
-              key={post.id}
-              className="rounded-2xl overflow-hidden bg-[#121212] border border-[#27272a] shadow-2xl shadow-black/40 animate-fade-in"
-            >
-              {/* Card Header */}
-              <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-[11px] font-bold text-zinc-300 border border-zinc-600">
-                    {(post.user_name?.[0] || 'C').toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white leading-none">
-                      {post.user_name || 'Citizen Reporter'}
-                    </p>
-                    <p className="text-[11px] text-zinc-500 mt-0.5">
-                      {timeAgo(post.created_at)}
-                    </p>
-                  </div>
-                </div>
-                <SeverityBadge severity={post.severity || 'Medium'} />
-              </div>
-
-              {/* Image */}
-              <div
-                className="relative aspect-[4/5] bg-zinc-900 cursor-zoom-in"
-                onClick={() => setZoomImage(post.image_url)}
-              >
-                <img
-                  src={post.image_url}
-                  alt={`Road hazard — ${post.severity} severity`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => { (e.target as HTMLImageElement).src = PLACEHOLDER_SVG; }}
-                />
-              </div>
-
-              <div className="p-4 space-y-3">
-                {/* Geo Pill */}
-                <a
-                  href={googleMapsUrl(post.latitude, post.longitude)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800/80 border border-zinc-700/50 text-xs text-zinc-300 hover:text-white hover:bg-zinc-700 transition"
-                >
-                  <MapPin size={12} className="text-lime-400" />
-                  {formatCoords(post.latitude, post.longitude)}
-                </a>
-
-                {/* AI Assessment */}
-                {post.ai_reasoning && (
-                  <div className="p-3 rounded-xl bg-[#0a0a0f] border border-[#1e1e28]">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Sparkles size={12} className="text-lime-400" />
-                      <span className="text-[10px] font-bold text-lime-400 uppercase tracking-wider">AI Assessment</span>
-                      {post.ai_confidence && (
-                        <span className="text-[10px] text-zinc-600 ml-auto">
-                          {Math.round(post.ai_confidence * 100)}% confidence
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[13px] text-zinc-300 leading-relaxed">
-                      {post.ai_reasoning}
-                    </p>
-                  </div>
-                )}
-
-                {/* Action Bar */}
-                <div className="flex items-center gap-2 pt-1">
-                  {(() => {
-                    const hasVoted = userVotedIds.has(post.id);
-                    return (
-                      <button
-                        onClick={() => handleUpvote(post.id)}
-                        disabled={hasVoted}
-                        title={hasVoted ? 'You have already confirmed this report' : 'Confirm this hazard report'}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition border ${
-                          hasVoted
-                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 cursor-default shadow-sm shadow-emerald-500/10'
-                            : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 border-zinc-700/50 hover:text-white active:scale-95'
-                        }`}
-                      >
-                        <ThumbsUp size={13} className={hasVoted ? 'fill-emerald-400' : ''} />
-                        {hasVoted ? '✓ Confirmed' : `${post.upvotes || 0} Confirmations`}
-                        {hasVoted && (
-                          <span className="text-[11px] opacity-75 font-mono ml-0.5">
-                            ({post.upvotes || 1})
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })()}
-                  <button
-                    onClick={() => handleShare(post)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-xs font-semibold text-zinc-300 transition border border-zinc-700/50"
-                  >
-                    <Share2 size={13} />
-                    Share
-                  </button>
-                </div>
-
-                {/* Status Badge */}
-                <div className="pt-1">
-                  <StatusBadge status={(post.status as ReportStatus) || 'Pending'} />
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </main>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { validateFrontendRequest, forbiddenResponse } from '@/lib/apiSecurity';
 import { NextRequest } from 'next/server';
 
 const DEMO_GOV_EMAIL = 'authority@forge.civic';
@@ -11,8 +12,13 @@ const DEMO_GOV_DEPT = 'Municipal Road & Infrastructure Authority';
  * Ensures the demo government official user exists and has role='gov',
  * then returns the credentials so the client can sign in with 1 click.
  */
-export async function POST(_req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
+    // 0. Enforce strict frontend client security
+    const secCheck = validateFrontendRequest(req);
+    if (!secCheck.authorized) {
+      return forbiddenResponse(secCheck.reason);
+    }
     // 1. Check if user exists or create them using supabaseAdmin
     try {
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({

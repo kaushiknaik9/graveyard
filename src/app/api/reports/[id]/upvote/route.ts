@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { authenticateRequest } from '@/lib/serverAuth';
+import { validateFrontendRequest, forbiddenResponse } from '@/lib/apiSecurity';
 import { NextRequest } from 'next/server';
 
 /**
@@ -12,6 +13,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 0. Enforce strict frontend client security
+    const secCheck = validateFrontendRequest(req);
+    if (!secCheck.authorized) {
+      return forbiddenResponse(secCheck.reason);
+    }
     const auth = await authenticateRequest(req);
     if (auth.status !== 200 || !auth.user) {
       return Response.json(

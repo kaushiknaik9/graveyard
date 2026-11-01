@@ -1,5 +1,5 @@
-import { supabaseAdmin } from './supabaseAdmin';
 import { NextRequest } from 'next/server';
+import { authenticateRequest as guardAuth, authenticateGovRequest as guardGovAuth } from './authGuard';
 import type { User } from '@supabase/supabase-js';
 
 export interface AuthResult {
@@ -10,78 +10,47 @@ export interface AuthResult {
 }
 
 /**
- * Extracts and verifies the Bearer token from the incoming request.
- * Returns the verified user and their server-validated role.
+ * Backward-compatible wrapper for existing routes.
  */
 export async function authenticateRequest(req: NextRequest): Promise<AuthResult> {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const result = await guardAuth(req);
+  if (!result.success) {
+    const errorBody = await result.response.json().catch(() => ({ error: 'Unauthorized' }));
     return {
       user: null,
       role: null,
-      error: 'Authentication required. Missing Bearer token.',
-      status: 401,
+      error: errorBody.error || 'Unauthorized',
+      status: (result.response.status as 401 | 403) || 401,
     };
   }
 
-  const token = authHeader.substring(7).trim();
-  if (!token) {
-    return {
-      user: null,
-      role: null,
-      error: 'Authentication required. Empty token.',
-      status: 401,
-    };
-  }
-
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-    if (error || !user) {
-      return {
-        user: null,
-        role: null,
-        error: error?.message || 'Invalid or expired session token.',
-        status: 401,
-      };
-    }
-
-    // Role is extracted securely from server-verified user metadata
-    const userRole = (user.user_metadata?.role as 'citizen' | 'gov') || 'citizen';
-
-    return {
-      user,
-      role: userRole,
-      error: null,
-      status: 200,
-    };
-  } catch (err: any) {
-    return {
-      user: null,
-      role: null,
-      error: err.message || 'Token verification failed.',
-      status: 401,
-    };
-  }
+  return {
+    user: result.context.user,
+    role: result.context.role,
+    error: null,
+    status: 200,
+  };
 }
 
 /**
- * Requires strictly 'gov' role. Rejects citizens with 403 Forbidden.
+ * Requires strictly 'gov' role.
  */
 export async function authenticateGovRequest(req: NextRequest): Promise<AuthResult> {
-  const auth = await authenticateRequest(req);
-  if (auth.error) {
-    return auth;
-  }
-
-  if (auth.role !== 'gov') {
+  const result = await guardGovAuth(req);
+  if (!result.success) {
+    const errorBody = await result.response.json().catch(() => ({ error: 'Forbidden' }));
     return {
-      user: auth.user,
-      role: auth.role,
-      error: 'Forbidden. Municipal government authority credentials required.',
-      status: 403,
+      user: null,
+      role: null,
+      error: errorBody.error || 'Forbidden',
+      status: (result.response.status as 401 | 403) || 403,
     };
   }
 
-  return auth;
+  return {
+    user: result.context.user,
+    role: result.context.role,
+    error: null,
+    status: 200,
+  };
 }
-

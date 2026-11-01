@@ -5,13 +5,25 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { Shield, User, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle2, Zap, Building2, KeyRound } from 'lucide-react';
+import {
+  Shield,
+  User,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  Zap,
+  Building2,
+  KeyRound,
+  Radio,
+} from 'lucide-react';
 
 type Tab = 'citizen' | 'gov';
 type Mode = 'signin' | 'signup';
 
 export default function AuthPage() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, signIn, signUp } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('citizen');
   const [mode, setMode] = useState<Mode>('signin');
@@ -31,9 +43,6 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
 
-  const { signIn, signUp } = useAuth();
-
-  // Set initial tab from redirect query if present
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -43,7 +52,6 @@ export default function AuthPage() {
     }
   }, []);
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (!loading && user) {
       const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -56,22 +64,22 @@ export default function AuthPage() {
     }
   }, [user, role, loading, router]);
 
-  // 1-Click Demo Official Login Handler
   const handleQuickDemoLogin = async () => {
     setError(null);
     setSuccess(null);
     setDemoLoading(true);
 
     try {
-      // 1. Ensure official demo account exists on server
-      const res = await fetch('/api/auth/gov-demo', { method: 'POST' });
+      const res = await fetch('/api/auth/gov-demo', {
+        method: 'POST',
+        headers: { 'x-forge-client': 'forge-next-frontend-v1' },
+      });
       const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to initialize demo official.');
       }
 
-      // 2. Sign in with demo credentials
       const { error: signInErr } = await signIn(data.email, data.password);
       if (signInErr) {
         setError(`Demo sign in failed: ${signInErr}`);
@@ -82,7 +90,7 @@ export default function AuthPage() {
         }, 600);
       }
     } catch (err: any) {
-      setError(err?.message || 'Demo official login failed. Please try manual credentials.');
+      setError(err?.message || 'Demo official login failed.');
     } finally {
       setDemoLoading(false);
     }
@@ -96,10 +104,12 @@ export default function AuthPage() {
 
     try {
       if (tab === 'gov' && govMode === 'register') {
-        // Register official via dedicated API
         const res = await fetch('/api/auth/register-gov', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-forge-client': 'forge-next-frontend-v1',
+          },
           body: JSON.stringify({
             email,
             password,
@@ -116,7 +126,6 @@ export default function AuthPage() {
           return;
         }
 
-        // Auto sign in after official registration
         const { error: signInErr } = await signIn(email, password);
         if (signInErr) {
           setSuccess('Account created! Please sign in with your password.');
@@ -137,12 +146,13 @@ export default function AuthPage() {
           setMode('signin');
         }
       } else {
-        // Standard Sign In for citizen or gov
         const { error: err } = await signIn(email, password);
         if (err) {
           setError(err);
         } else {
           setSuccess('Signed in successfully. Redirecting...');
+          const target = tab === 'gov' ? '/gov' : '/';
+          setTimeout(() => router.replace(target), 400);
         }
       }
     } catch {
@@ -154,120 +164,110 @@ export default function AuthPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-lime-400 border-t-transparent animate-spin" />
+      <div className="min-h-[calc(100vh-4rem)] bg-[var(--bg-canvas)] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#F7D10C] border-t-transparent animate-spin" />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#09090b] flex items-center justify-center p-4 sm:p-6">
-      {/* Background gradient orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-lime-500/5 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md animate-fade-in">
+    <main className="min-h-[calc(100vh-4rem)] bg-[var(--bg-canvas)] flex items-center justify-center p-4 sm:p-6 transition-colors">
+      <div className="w-full max-w-md animate-fade-in space-y-6">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-lime-400 to-emerald-500 flex items-center justify-center mx-auto mb-4 shadow-2xl shadow-lime-400/20">
-            <Shield size={24} className="text-black" />
+        <div className="text-center space-y-2">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto bg-[var(--bg-elevated)] border border-[var(--border-subtle)] flex items-center justify-center p-1 shadow-sm">
+            <img src="/Logo.png" alt="Forge Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-lime-300 to-emerald-400 bg-clip-text text-transparent">
-            Forge Civic
+          <h1 className="text-xl font-extrabold tracking-tight text-[var(--text-primary)]">
+            FORGE ACCESS TERMINAL
           </h1>
-          <p className="text-sm text-zinc-500 mt-1">AI-Powered Road Hazard Reporting</p>
+          <p className="font-mono text-xs text-[var(--text-secondary)]">
+            Autonomous Road Hazard Telemetry & Municipal Incident Dispatch
+          </p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-[#27272a] bg-[#0f0f12]/80 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden">
+        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-lg overflow-hidden">
           {/* Main Tab Selector */}
-          <div className="flex border-b border-[#27272a]">
+          <div className="flex border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 gap-1">
             <button
+              type="button"
               onClick={() => { setTab('citizen'); setError(null); setSuccess(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-bold transition-all relative ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                 tab === 'citizen'
-                  ? 'text-emerald-400'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <User size={16} />
-              Citizen Reporter
-              {tab === 'citizen' && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-lime-400 to-emerald-500 rounded-full" />
-              )}
+              <User size={14} />
+              <span>CITIZEN</span>
             </button>
             <button
+              type="button"
               onClick={() => { setTab('gov'); setError(null); setSuccess(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-4 text-sm font-bold transition-all relative ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
                 tab === 'gov'
-                  ? 'text-amber-400'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Shield size={16} />
-              Gov Official
-              {tab === 'gov' && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full" />
-              )}
+              <Shield size={14} className="text-[#F7D10C]" />
+              <span>OFFICIAL</span>
             </button>
           </div>
 
           <div className="p-6">
-            {/* ── GOV OFFICIAL SECTION ── */}
+            {/* GOV OFFICIAL SECTION */}
             {tab === 'gov' && (
               <div className="space-y-4 mb-5">
                 {/* 1-Click Instant Demo Official Access Card */}
-                <div className="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/30">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Shield size={14} className="text-amber-400" />
-                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                          Municipal Highway Authority
-                        </span>
-                      </div>
-                      <p className="text-xs text-zinc-400 mt-1">
-                        One-click access to the incident dispatch command center.
-                      </p>
-                    </div>
+                <div className="p-4 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield size={14} className="text-[#F7D10C]" />
+                    <span className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase">
+                      Municipal Highway Authority
+                    </span>
                   </div>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Instant access to the incident response dispatch console.
+                  </p>
                   <button
                     type="button"
                     disabled={demoLoading || submitting}
                     onClick={handleQuickDemoLogin}
-                    className="w-full mt-2 py-2.5 px-4 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-400/20 active:scale-95 disabled:opacity-60"
+                    className="w-full mt-3 py-2.5 px-4 rounded-lg bg-[#F7D10C] text-[#09090b] font-mono font-bold text-xs flex items-center justify-center gap-2 transition hover:brightness-105 active:scale-95 disabled:opacity-60 cursor-pointer shadow-sm"
                   >
                     {demoLoading ? (
                       <div className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
                     ) : (
                       <>
                         <Zap size={14} className="fill-black" />
-                        ⚡ Instant Demo Official Sign-In
+                        <span>⚡ 1-Click Demo Official Login</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                {/* Gov Sub-mode Toggle (Sign In vs Register Official) */}
-                <div className="flex gap-1 p-1 bg-[#121218] rounded-lg">
+                {/* Gov Sub-mode Toggle */}
+                <div className="flex gap-1 p-1 bg-[var(--bg-elevated)] rounded-lg font-mono text-xs">
                   <button
+                    type="button"
                     onClick={() => { setGovMode('signin'); setError(null); setSuccess(null); }}
-                    className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+                    className={`flex-1 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
                       govMode === 'signin'
-                        ? 'bg-[#1e1e24] text-white shadow-sm'
-                        : 'text-zinc-500 hover:text-zinc-300'
+                        ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     Official Sign In
                   </button>
                   <button
+                    type="button"
                     onClick={() => { setGovMode('register'); setError(null); setSuccess(null); }}
-                    className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+                    className={`flex-1 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
                       govMode === 'register'
-                        ? 'bg-[#1e1e24] text-white shadow-sm'
-                        : 'text-zinc-500 hover:text-zinc-300'
+                        ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     Register Official
@@ -276,25 +276,27 @@ export default function AuthPage() {
               </div>
             )}
 
-            {/* ── CITIZEN SECTION SUB-MODE TOGGLE ── */}
+            {/* CITIZEN SUB-MODE TOGGLE */}
             {tab === 'citizen' && (
-              <div className="flex gap-1 mb-5 p-1 bg-[#121218] rounded-lg">
+              <div className="flex gap-1 mb-5 p-1 bg-[var(--bg-elevated)] rounded-lg font-mono text-xs">
                 <button
+                  type="button"
                   onClick={() => { setMode('signin'); setError(null); setSuccess(null); }}
-                  className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+                  className={`flex-1 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
                     mode === 'signin'
-                      ? 'bg-[#1e1e24] text-white shadow-sm'
-                      : 'text-zinc-500 hover:text-zinc-300'
+                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   Sign In
                 </button>
                 <button
+                  type="button"
                   onClick={() => { setMode('signup'); setError(null); setSuccess(null); }}
-                  className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+                  className={`flex-1 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
                     mode === 'signup'
-                      ? 'bg-[#1e1e24] text-white shadow-sm'
-                      : 'text-zinc-500 hover:text-zinc-300'
+                      ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   Create Account
@@ -304,24 +306,23 @@ export default function AuthPage() {
 
             {/* Error / Success Messages */}
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-fade-in">
-                <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
-                <p className="text-xs text-red-300">{error}</p>
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2 font-mono animate-fade-in">
+                <AlertCircle size={15} className="text-red-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-red-500">{error}</p>
               </div>
             )}
             {success && (
-              <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2 animate-fade-in">
-                <CheckCircle2 size={16} className="text-emerald-400 mt-0.5 shrink-0" />
-                <p className="text-xs text-emerald-300">{success}</p>
+              <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-start gap-2 font-mono animate-fade-in">
+                <CheckCircle2 size={15} className="text-emerald-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-emerald-500">{success}</p>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {/* Name field for Citizen Signup OR Gov Register */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {((tab === 'citizen' && mode === 'signup') || (tab === 'gov' && govMode === 'register')) && (
                 <div>
-                  <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                  <label className="block font-mono text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
                     {tab === 'gov' ? 'Official Full Name & Title' : 'Display Name'}
                   </label>
                   <input
@@ -330,16 +331,15 @@ export default function AuthPage() {
                     placeholder={tab === 'gov' ? 'e.g. Officer Ramesh Rao' : 'Your name'}
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#09090b] border border-[#27272a] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400/30 focus:border-lime-400/40 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                 </div>
               )}
 
-              {/* Department field for Gov Register */}
               {tab === 'gov' && govMode === 'register' && (
                 <div>
-                  <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <Building2 size={12} className="text-amber-400" />
+                  <label className="block font-mono text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <Building2 size={12} className="text-[#F7D10C]" />
                     Government Department
                   </label>
                   <input
@@ -348,29 +348,27 @@ export default function AuthPage() {
                     placeholder="e.g. Municipal PWD / Road Safety Division"
                     value={department}
                     onChange={e => setDepartment(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#09090b] border border-[#27272a] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400/40 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                 </div>
               )}
 
-              {/* Email field */}
               <div>
-                <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
-                  {tab === 'gov' ? 'Government / Municipal Email' : 'Email Address'}
+                <label className="block font-mono text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                  {tab === 'gov' ? 'Government Email' : 'Email Address'}
                 </label>
                 <input
                   type="email"
                   required
-                  placeholder={tab === 'gov' ? 'official@pwd.gov or your email' : 'you@example.com'}
+                  placeholder={tab === 'gov' ? 'official@pwd.gov' : 'citizen@example.com'}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-[#09090b] border border-[#27272a] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400/30 focus:border-lime-400/40 transition"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                 />
               </div>
 
-              {/* Password field */}
               <div>
-                <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5">
+                <label className="block font-mono text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -381,60 +379,56 @@ export default function AuthPage() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     minLength={6}
-                    className="w-full px-4 py-3 pr-12 rounded-xl bg-[#09090b] border border-[#27272a] text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400/30 focus:border-lime-400/40 transition"
+                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                   >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
               </div>
 
-              {/* Passcode for Gov Registration */}
               {tab === 'gov' && govMode === 'register' && (
                 <div>
-                  <label className="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <label className="block font-mono text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
-                      <KeyRound size={12} className="text-amber-400" />
+                      <KeyRound size={12} className="text-[#F7D10C]" />
                       Official Passcode
                     </span>
-                    <span className="text-[10px] text-amber-400/80 font-mono">FORGE-GOV-2026</span>
+                    <span className="text-[10px] text-[#F7D10C]">FORGE-GOV-2026</span>
                   </label>
                   <input
                     type="text"
                     required
                     value={passcode}
                     onChange={e => setPasscode(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-[#09090b] border border-[#27272a] text-sm text-amber-300 font-mono focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[#F7D10C] font-mono focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                 </div>
               )}
 
-              {/* Submit button */}
               <button
                 type="submit"
                 disabled={submitting || demoLoading}
-                className={`w-full py-3.5 rounded-xl text-sm font-extrabold transition-all flex items-center justify-center gap-2 mt-2 ${
-                  tab === 'gov'
-                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-black shadow-lg shadow-amber-400/20 hover:shadow-amber-400/30'
-                    : 'bg-gradient-to-r from-lime-400 to-emerald-500 text-black shadow-lg shadow-lime-400/20 hover:shadow-lime-400/30'
-                } ${submitting ? 'opacity-70 cursor-not-allowed' : 'hover:scale-[1.02]'}`}
+                className="w-full py-3 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 mt-2 bg-[#F7D10C] text-[#09090b] hover:brightness-105 active:scale-95 shadow-sm disabled:opacity-60 cursor-pointer"
               >
                 {submitting ? (
-                  <div className="w-5 h-5 rounded-full border-2 border-black/30 border-t-black animate-spin" />
+                  <div className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
                 ) : (
                   <>
-                    {tab === 'gov'
-                      ? govMode === 'register'
-                        ? 'Register Official Credentials'
-                        : 'Sign In to Official Command Center'
-                      : mode === 'signup'
-                      ? 'Create Citizen Account'
-                      : 'Sign In as Citizen'}
-                    <ArrowRight size={16} />
+                    <span>
+                      {tab === 'gov'
+                        ? govMode === 'register'
+                          ? 'Register Official Account'
+                          : 'Authorize Official Session'
+                        : mode === 'signup'
+                        ? 'Create Citizen Profile'
+                        : 'Sign In as Citizen'}
+                    </span>
+                    <ArrowRight size={14} />
                   </>
                 )}
               </button>
@@ -442,9 +436,8 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-[11px] text-zinc-600 mt-6">
-          Civic road safety infrastructure • Powered by Gemini AI & Supabase
+        <p className="text-center font-mono text-[11px] text-[var(--text-muted)]">
+          FORGE CIVIC INFRASTRUCTURE • SATELLITE & GEMINI VISION TELEMETRY
         </p>
       </div>
     </main>

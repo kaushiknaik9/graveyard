@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { validateFrontendRequest, forbiddenResponse } from '@/lib/apiSecurity';
 import { NextRequest } from 'next/server';
 
 const OFFICIAL_PASSCODE = 'FORGE-GOV-2026';
@@ -10,6 +11,11 @@ const OFFICIAL_PASSCODE = 'FORGE-GOV-2026';
  */
 export async function POST(req: NextRequest) {
   try {
+    // 0. Enforce strict frontend client security
+    const secCheck = validateFrontendRequest(req);
+    if (!secCheck.authorized) {
+      return forbiddenResponse(secCheck.reason);
+    }
     const body = await req.json().catch(() => ({}));
     const { email, password, name, department, passcode } = body;
 

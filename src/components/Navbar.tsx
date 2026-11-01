@@ -1,144 +1,142 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
-import { LogOut, Shield, User, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import {
+  Sun,
+  Moon,
+  Shield,
+  Plus,
+  LogIn,
+  LogOut,
+  Layers,
+  Radio,
+  Building2,
+} from 'lucide-react';
 
 export default function Navbar() {
-  const { user, role, signOut, loading } = useAuth();
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  // Don't render on the auth page
-  if (pathname === '/auth') return null;
+  const { user, role, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-[#27272a]/60">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Brand */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-lime-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-lime-400/20 group-hover:scale-105 transition">
-            <Shield size={16} className="text-black" />
-          </div>
-          <span className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-lime-300 to-emerald-400 bg-clip-text text-transparent">
-            Forge Civic
-          </span>
-        </Link>
-
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center gap-4">
-          <Link
-            href="/"
-            className={`text-sm font-medium transition ${pathname === '/' ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
-          >
-            Feed
+    <header className="sticky top-0 z-40 h-16 w-full border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/90 backdrop-blur-md px-4 sm:px-6 transition-colors">
+      <div className="max-w-[1440px] mx-auto h-full flex items-center justify-between gap-4">
+        {/* Brand Section */}
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            {/* Brand Logo from public/Logo.png */}
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-[var(--bg-elevated)] border border-[var(--border-subtle)] group-hover:scale-105 transition-transform">
+              <img src="/Logo.png" alt="Forge Civic Logo" className="w-full h-full object-contain p-0.5" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold tracking-tight text-base sm:text-lg text-[var(--text-primary)]">
+                FORGE
+              </span>
+              <span className="hidden sm:inline font-mono text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
+                ROAD SAFETY
+              </span>
+            </div>
           </Link>
-          {role === 'gov' && (
+
+          {/* Nav links on desktop */}
+          <nav className="hidden md:flex items-center gap-1 ml-4 pl-4 border-l border-[var(--border-subtle)] text-xs font-semibold">
             <Link
-              href="/gov"
-              className={`text-sm font-medium transition ${pathname === '/gov' ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+              href="/"
+              className={`px-3 py-1.5 rounded-lg transition-colors ${
+                pathname === '/'
+                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              Gov Inbox
+              Citizen Feed
+            </Link>
+            {role === 'gov' && (
+              <Link
+                href="/gov"
+                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+                  pathname === '/gov'
+                    ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] font-bold'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Building2 size={13} className="text-[#F7D10C]" />
+                <span>Municipal Dashboard</span>
+              </Link>
+            )}
+          </nav>
+        </div>
+
+        {/* Right Controls */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* THEME TOGGLE BUTTON */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label="Toggle Light / Dark Mode"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? (
+              <>
+                <Sun size={14} className="text-[#F7D10C]" />
+                <span className="hidden sm:inline font-mono text-[11px]">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon size={14} className="text-zinc-600" />
+                <span className="hidden sm:inline font-mono text-[11px]">Dark</span>
+              </>
+            )}
+          </button>
+
+          {/* Quick Action Button for Mobile/Tablet - CITIZENS ONLY */}
+          {role === 'citizen' && (
+            <Link
+              href="/#report"
+              className="hidden sm:flex lg:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F7D10C] text-[#09090b] text-xs font-bold hover:brightness-105 active:scale-95 transition-all shadow-sm"
+            >
+              <Plus size={14} strokeWidth={3} />
+              <span>Report</span>
             </Link>
           )}
 
-          {!loading && user ? (
-            <div className="flex items-center gap-3 ml-2">
-              {/* Role Badge */}
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border ${
-                role === 'gov'
-                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              }`}>
-                {role === 'gov' ? <Shield size={10} /> : <User size={10} />}
-                {role === 'gov' ? 'Gov Authority' : 'Citizen'}
-              </span>
-
-              {/* User Info */}
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-[11px] font-bold text-zinc-300 border border-zinc-600">
-                  {(user.email?.[0] || 'U').toUpperCase()}
-                </div>
-                <span className="text-xs text-zinc-400 max-w-[120px] truncate hidden lg:block">
-                  {user.email}
+          {/* User Role Pill & Auth State */}
+          {user ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-xs font-mono">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    role === 'gov' ? 'bg-[#F7D10C]' : 'bg-blue-400'
+                  }`}
+                />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-primary)]">
+                  {role === 'gov' ? 'GOV OFFICIAL' : 'CITIZEN'}
                 </span>
               </div>
 
-              {/* Sign Out */}
               <button
-                onClick={signOut}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition border border-transparent hover:border-zinc-700"
+                type="button"
+                onClick={() => signOut()}
+                className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+                title="Sign Out"
               >
-                <LogOut size={13} />
-                Sign Out
+                <LogOut size={16} />
               </button>
             </div>
-          ) : !loading ? (
+          ) : (
             <Link
               href="/auth"
-              className="ml-2 px-4 py-2 rounded-lg bg-gradient-to-r from-lime-400 to-emerald-500 text-black text-xs font-bold hover:scale-105 transition shadow-lg shadow-lime-400/20"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-primary)] text-xs font-semibold transition-colors"
             >
-              Sign In
+              <LogIn size={13} />
+              <span>Sign In</span>
             </Link>
-          ) : null}
+          )}
         </div>
-
-        {/* Mobile Menu Toggle */}
-        <button
-          className="md:hidden p-2 text-zinc-400 hover:text-white transition"
-          onClick={() => setMenuOpen(!menuOpen)}
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
       </div>
-
-      {/* Mobile Menu Dropdown */}
-      {menuOpen && (
-        <div className="md:hidden glass border-t border-[#27272a]/60 animate-slide-up">
-          <div className="px-4 py-3 space-y-3">
-            <Link href="/" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-zinc-300 hover:text-white transition">
-              Feed
-            </Link>
-            {role === 'gov' && (
-              <Link href="/gov" onClick={() => setMenuOpen(false)} className="block text-sm font-medium text-zinc-300 hover:text-white transition">
-                Gov Inbox
-              </Link>
-            )}
-            {user ? (
-              <>
-                <div className="flex items-center gap-2 pt-2 border-t border-zinc-800">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-[11px] font-bold text-zinc-300 border border-zinc-600">
-                    {(user.email?.[0] || 'U').toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white truncate">{user.email}</p>
-                    <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">
-                      {role === 'gov' ? 'Gov Authority' : 'Citizen'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { signOut(); setMenuOpen(false); }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition"
-                >
-                  <LogOut size={13} />
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/auth"
-                onClick={() => setMenuOpen(false)}
-                className="block text-center py-2.5 rounded-lg bg-gradient-to-r from-lime-400 to-emerald-500 text-black text-xs font-bold"
-              >
-                Sign In
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-    </nav>
+    </header>
   );
 }

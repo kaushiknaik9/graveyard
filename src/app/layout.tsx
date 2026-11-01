@@ -1,28 +1,45 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
-  title: 'Forge Civic — Road Hazard Reporting',
-  description: 'AI-verified road hazard reporting for citizens and municipal authorities',
+  title: 'Forge — Road Hazard & Pothole Reporting',
+  description: 'Report road potholes and hazards instantly. Automatically verified and routed to the nearest Municipal Corporation for rapid repair.',
+  icons: {
+    icon: '/Logo.png',
+    shortcut: '/Logo.png',
+    apple: '/Logo.png',
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#09090b',
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <meta name="theme-color" content="#09090b" />
-      </head>
-      <body className="bg-[#09090b] text-white antialiased font-sans">
-        <AuthProvider>
-          <Navbar />
-          {children}
-        </AuthProvider>
+    <html lang="en" className="dark" data-theme="dark" suppressHydrationWarning>
+      <body className="bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased min-h-screen selection:bg-[#F7D10C] selection:text-black">
+        <ThemeProvider>
+          <AuthProvider>
+            <div className="min-h-screen flex flex-col bg-[var(--bg-canvas)]">
+              <Navbar />
+              <div className="flex-1">
+                {children}
+              </div>
+            </div>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
