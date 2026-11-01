@@ -187,61 +187,61 @@ export default function AuthPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-lg overflow-hidden">
-          {/* Main Tab Selector */}
+        <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-xl overflow-hidden select-none">
+          {/* Main Tab Selector (Large touch targets for mobile) */}
           <div className="flex border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 gap-1">
             <button
               type="button"
               onClick={() => { setTab('citizen'); setError(null); setSuccess(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-mono font-bold transition-all active:scale-[0.98] cursor-pointer ${
                 tab === 'citizen'
                   ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <User size={14} />
+              <User size={16} />
               <span>CITIZEN</span>
             </button>
             <button
               type="button"
               onClick={() => { setTab('gov'); setError(null); setSuccess(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+              className={`flex-1 min-h-[48px] flex items-center justify-center gap-2 py-3 rounded-xl text-xs sm:text-sm font-mono font-bold transition-all active:scale-[0.98] cursor-pointer ${
                 tab === 'gov'
                   ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <Shield size={14} className="text-[#F7D10C]" />
+              <Shield size={16} className="text-[#F7D10C]" />
               <span>OFFICIAL</span>
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {/* GOV OFFICIAL SECTION */}
             {tab === 'gov' && (
               <div className="space-y-4 mb-5">
                 {/* 1-Click Instant Demo Official Access Card */}
                 <div className="p-4 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
                   <div className="flex items-center gap-2 mb-1">
-                    <Shield size={14} className="text-[#F7D10C]" />
+                    <Shield size={15} className="text-[#F7D10C]" />
                     <span className="font-mono text-xs font-bold text-[var(--text-primary)] uppercase">
                       Municipal Highway Authority
                     </span>
                   </div>
                   <p className="text-xs text-[var(--text-secondary)]">
-                    Instant access to the incident response dispatch console.
+                    Instant 1-click access to the incident response dispatch console.
                   </p>
                   <button
                     type="button"
                     disabled={demoLoading || submitting}
                     onClick={handleQuickDemoLogin}
-                    className="w-full mt-3 py-2.5 px-4 rounded-lg bg-[#F7D10C] text-[#09090b] font-mono font-bold text-xs flex items-center justify-center gap-2 transition hover:brightness-105 active:scale-95 disabled:opacity-60 cursor-pointer shadow-sm"
+                    className="w-full min-h-[48px] mt-3 py-3 px-4 rounded-xl bg-[#F7D10C] text-[#09090b] font-mono font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition hover:brightness-105 active:scale-[0.98] disabled:opacity-60 cursor-pointer shadow-sm"
                   >
                     {demoLoading ? (
-                      <div className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
+                      <div className="w-5 h-5 rounded-full border-2 border-black border-t-transparent animate-spin" />
                     ) : (
                       <>
-                        <Zap size={14} className="fill-black" />
+                        <Zap size={16} className="fill-black" />
                         <span>⚡ 1-Click Demo Official Login</span>
                       </>
                     )}
@@ -331,7 +331,7 @@ export default function AuthPage() {
                     placeholder={tab === 'gov' ? 'e.g. Officer Ramesh Rao' : 'Your name'}
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                 </div>
               )}
@@ -348,7 +348,7 @@ export default function AuthPage() {
                     placeholder="e.g. Municipal PWD / Road Safety Division"
                     value={department}
                     onChange={e => setDepartment(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                 </div>
               )}
@@ -363,7 +363,7 @@ export default function AuthPage() {
                   placeholder={tab === 'gov' ? 'official@pwd.gov' : 'citizen@example.com'}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
+                  className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                 />
               </div>
 
@@ -379,14 +379,14 @@ export default function AuthPage() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     minLength={6}
-                    className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 pr-10 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-base sm:text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+                    className="w-10 h-10 flex items-center justify-center absolute right-1 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
                   >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
@@ -405,7 +405,7 @@ export default function AuthPage() {
                     required
                     value={passcode}
                     onChange={e => setPasscode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-xs text-[#F7D10C] font-mono focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-base sm:text-xs text-[#F7D10C] font-mono focus:outline-none focus:ring-1 focus:ring-[#F7D10C]"
                   />
                 </div>
               )}
@@ -413,7 +413,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={submitting || demoLoading}
-                className="w-full py-3 rounded-xl font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 mt-2 bg-[#F7D10C] text-[#09090b] hover:brightness-105 active:scale-95 shadow-sm disabled:opacity-60 cursor-pointer"
+                className="w-full min-h-[48px] py-3 rounded-xl font-mono text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 mt-2 bg-[#F7D10C] text-[#09090b] hover:brightness-105 active:scale-[0.98] shadow-sm disabled:opacity-60 cursor-pointer"
               >
                 {submitting ? (
                   <div className="w-4 h-4 rounded-full border-2 border-black border-t-transparent animate-spin" />

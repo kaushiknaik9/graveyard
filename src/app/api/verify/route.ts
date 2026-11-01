@@ -240,11 +240,15 @@ Return ONLY valid JSON matching:
       );
     }
 
-    // ── Step 3: Real Reverse Geocoding & Municipal Ward Jurisdiction ──
-    const [humanAddress, jurisdiction] = await Promise.all([
-      reverseGeocode(latitude, longitude),
-      Promise.resolve(matchJurisdiction(latitude, longitude)),
-    ]);
+    // ── Step 3: Resilient Reverse Geocoding & Municipal Ward Jurisdiction ──
+    let humanAddress: string;
+    try {
+      humanAddress = await reverseGeocode(latitude, longitude);
+    } catch {
+      humanAddress = `Road Hazard (${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E)`;
+    }
+
+    const jurisdiction = matchJurisdiction(latitude, longitude);
 
     // ── Step 4: Upload image to Supabase Storage with bucket auto-provisioning ──
     let imageUrl: string;
@@ -387,7 +391,13 @@ Return ONLY valid JSON matching:
         analysis,
         jurisdiction,
       },
-      { status: 201 }
+      {
+        status: 201,
+        headers: {
+          'Cache-Control': 'no-store, must-revalidate',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
     );
   } catch (error: any) {
     console.error('[Verify API Fatal Error]', error);

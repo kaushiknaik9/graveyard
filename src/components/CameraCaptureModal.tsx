@@ -121,7 +121,7 @@ export default function CameraCaptureModal({
         setCoords({ lat: 15.3647, lng: 75.1240, accuracy: 50 });
         setShowPinPicker(true);
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }, []);
 
@@ -260,9 +260,9 @@ export default function CameraCaptureModal({
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center transition cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center select-none active:scale-95 transition-all cursor-pointer"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
@@ -368,32 +368,32 @@ export default function CameraCaptureModal({
               </div>
 
               {/* Shutter Bar */}
-              <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-6 px-4">
+              <div className="absolute bottom-4 inset-x-0 flex items-center justify-center gap-6 px-4 select-none">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md text-white flex items-center justify-center border border-white/20 hover:bg-zinc-800 transition cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-black/75 backdrop-blur-md text-white flex items-center justify-center border border-white/20 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
                   title="Upload from Gallery"
                 >
-                  <Upload size={16} />
+                  <Upload size={18} />
                 </button>
 
                 <button
                   type="button"
                   onClick={handleShutterSnap}
-                  className="w-16 h-16 rounded-full border-4 border-white bg-[#F7D10C] hover:brightness-105 active:scale-95 transition flex items-center justify-center shadow-xl cursor-pointer"
+                  className="w-18 h-18 rounded-full border-4 border-white bg-[#F7D10C] hover:brightness-105 active:scale-90 transition-transform flex items-center justify-center shadow-2xl cursor-pointer"
                   title="Capture Shutter"
                 >
-                  <div className="w-12 h-12 rounded-full border-2 border-black" />
+                  <div className="w-14 h-14 rounded-full border-2 border-black" />
                 </button>
 
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="w-10 h-10 rounded-full bg-black/70 backdrop-blur-md text-white flex items-center justify-center border border-white/20 hover:bg-zinc-800 transition cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-black/75 backdrop-blur-md text-white flex items-center justify-center border border-white/20 hover:bg-zinc-800 active:scale-95 transition-all cursor-pointer"
                   title="Reset Camera"
                 >
-                  <RefreshCw size={16} />
+                  <RefreshCw size={18} />
                 </button>
               </div>
             </div>
@@ -461,11 +461,11 @@ export default function CameraCaptureModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] flex items-center justify-between gap-3">
+        <div className="p-3 sm:p-4 bg-[var(--bg-surface)] border-t border-[var(--border-subtle)] flex items-center justify-between gap-3 select-none">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] text-xs font-semibold transition cursor-pointer"
+            className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] text-xs font-semibold active:scale-95 transition-all cursor-pointer"
           >
             Cancel
           </button>
@@ -475,18 +475,18 @@ export default function CameraCaptureModal({
               type="button"
               disabled={compressing || !coords}
               onClick={handlePublish}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-[#F7D10C] hover:brightness-105 active:scale-95 text-[#09090b] text-xs font-bold font-mono flex items-center justify-center gap-2 transition shadow-md disabled:opacity-50 cursor-pointer"
+              className="flex-1 min-h-[48px] py-2.5 px-4 rounded-xl bg-[#F7D10C] hover:brightness-105 active:scale-[0.98] text-[#09090b] text-xs font-bold font-mono flex items-center justify-center gap-2 transition shadow-md disabled:opacity-50 cursor-pointer"
             >
-              <Sparkles size={14} />
+              <Sparkles size={15} />
               Publish Verified Alert
             </button>
           ) : (
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+              className="flex-1 min-h-[48px] py-2.5 px-4 rounded-xl bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-primary)] text-xs font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition cursor-pointer"
             >
-              <Upload size={14} />
+              <Upload size={15} />
               Choose from Gallery / Camera
             </button>
           )}

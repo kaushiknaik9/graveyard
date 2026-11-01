@@ -573,22 +573,29 @@ export default function GovInboxPage() {
         {/* ============================================================== */}
         <main
           className={`col-span-1 lg:col-span-7 bg-[var(--bg-canvas)] flex-col overflow-y-auto ${
-            mobileDetailView ? 'flex absolute inset-0 z-30 lg:static' : 'hidden lg:flex'
+            mobileDetailView
+              ? 'flex fixed inset-0 z-50 bg-[var(--bg-canvas)] overflow-y-auto p-4 sm:p-6 pb-24 animate-slide-up lg:static lg:p-6 lg:z-auto lg:animate-none'
+              : 'hidden lg:flex'
           }`}
         >
           {activeReport ? (
-            <div className="w-full p-4 sm:p-6 space-y-5">
-              {/* Sticky Mobile Back Header */}
-              <div className="lg:hidden flex items-center justify-between pb-3 border-b border-[var(--border-subtle)] bg-[var(--bg-canvas)] sticky top-0 z-20">
+            <div className="w-full space-y-5">
+              {/* Top Sticky Bar Inside Mobile Drawer (< 1024px) */}
+              <div className="lg:hidden sticky -top-4 -mx-4 -mt-4 px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 backdrop-blur-xl z-30 flex items-center justify-between gap-3 shadow-md select-none">
                 <button
                   type="button"
                   onClick={() => setMobileDetailView(false)}
-                  className="flex items-center gap-2 font-mono text-xs font-bold text-[#F7D10C] cursor-pointer"
+                  className="min-h-[44px] flex items-center gap-2 font-mono text-xs font-bold text-[#F7D10C] active:scale-95 transition-transform cursor-pointer"
                 >
-                  <ArrowLeft size={16} />
+                  <ArrowLeft size={18} />
                   <span>← Back to Incident Queue</span>
                 </button>
-                <SeverityBadge severity={activeReport.severity} />
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[11px] font-bold text-[var(--text-muted)]">
+                    INC-{activeReport.id.slice(0, 8)}
+                  </span>
+                  <SeverityBadge severity={activeReport.severity} size="sm" />
+                </div>
               </div>
 
               {/* Status Message Notification Toast */}
@@ -755,50 +762,50 @@ export default function GovInboxPage() {
                   Official Municipal Dispatch Pipeline
                 </h4>
 
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3 select-none">
                   {/* Step 1: Acknowledge */}
                   <button
                     type="button"
                     onClick={() => handleUpdateStatus('Acknowledged')}
                     disabled={statusUpdating || activeReport.status === 'Acknowledged' || activeReport.status === 'In Progress' || activeReport.status === 'Repaired'}
-                    className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                    className={`w-full sm:w-auto min-h-[48px] px-4 py-3 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer ${
                       activeReport.status === 'Acknowledged' || activeReport.status === 'In Progress' || activeReport.status === 'Repaired'
                         ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 cursor-default'
                         : 'bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-primary)] border border-[var(--border-subtle)]'
                     }`}
                   >
-                    <Eye size={14} />
+                    <Eye size={15} />
                     <span>1. Acknowledge Docket</span>
                   </button>
 
-                  {/* Step 2: Dispatch Crew */}
+                  {/* Step 2: Dispatch Repair Squad */}
                   <button
                     type="button"
                     onClick={() => handleUpdateStatus('In Progress')}
                     disabled={statusUpdating || activeReport.status === 'In Progress' || activeReport.status === 'Repaired'}
-                    className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                    className={`w-full sm:w-auto min-h-[48px] px-4 py-3 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer ${
                       activeReport.status === 'In Progress' || activeReport.status === 'Repaired'
                         ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20 cursor-default'
                         : 'bg-amber-500 text-black shadow-sm hover:brightness-105'
                     }`}
                   >
-                    <Truck size={14} />
-                    <span>2. Dispatch Repair Crew</span>
+                    <Truck size={15} />
+                    <span>2. Dispatch Repair Squad</span>
                   </button>
 
-                  {/* Step 3: Upload Proof & Mark Repaired */}
+                  {/* Step 3: Upload Proof & Complete */}
                   <button
                     type="button"
                     onClick={() => setShowRepairModal(true)}
                     disabled={statusUpdating || activeReport.status === 'Repaired'}
-                    className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                    className={`w-full sm:w-auto min-h-[48px] px-4 py-3 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer ${
                       activeReport.status === 'Repaired'
                         ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 cursor-default'
                         : 'bg-[#F7D10C] text-[#09090b] shadow-sm hover:brightness-105'
                     }`}
                   >
-                    <CheckCircle2 size={14} />
-                    <span>3. Upload Repair Proof & Close</span>
+                    <CheckCircle2 size={15} />
+                    <span>3. Upload Proof & Complete</span>
                   </button>
                 </div>
               </div>

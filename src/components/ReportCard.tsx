@@ -9,6 +9,7 @@ import {
   Clock,
   CheckCircle2,
   Check,
+  Navigation,
 } from 'lucide-react';
 import { Report } from '@/types';
 import { timeAgo, googleMapsUrl, PLACEHOLDER_IMAGE } from '@/lib/utils';
@@ -54,11 +55,11 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
     : report.address;
 
   return (
-    <article className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-sm transition-all hover:border-[var(--border-strong)]">
+    <article className="w-full bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-2xl overflow-hidden shadow-sm transition-all hover:border-[var(--border-strong)]">
       {/* Header */}
-      <div className="p-4 flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] font-mono text-xs font-bold text-[var(--text-primary)] flex items-center justify-center shrink-0">
+      <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] font-mono text-xs font-bold text-[var(--text-primary)] flex items-center justify-center shrink-0">
             {(report.user_name?.[0] || 'C').toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -67,16 +68,16 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
                 {report.user_name || 'Citizen Reporter'}
               </span>
               {report.ward && (
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] truncate max-w-[150px]">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-subtle)] truncate max-w-[130px]">
                   {report.ward}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1 font-mono text-[11px] text-[var(--text-muted)] mt-0.5">
+            <div className="flex items-center gap-1 font-mono text-[10px] sm:text-[11px] text-[var(--text-muted)] mt-0.5">
               <Clock size={11} />
               <span>{timeAgo(report.created_at)}</span>
               <span>•</span>
-              <span className="truncate max-w-[140px]">{report.ward || 'Road Hazard'}</span>
+              <span className="truncate max-w-[120px]">{report.ward || 'Road Hazard'}</span>
             </div>
           </div>
         </div>
@@ -106,8 +107,8 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
         </div>
       </div>
 
-      {/* Constrained Image Viewport */}
-      <div className="relative h-[320px] sm:h-[360px] w-full bg-zinc-950 overflow-hidden border-y border-[var(--border-subtle)] cursor-zoom-in group">
+      {/* Constrained Image Viewport (Aspect 4/3 mobile-friendly) */}
+      <div className="relative w-full aspect-[4/3] max-h-[300px] sm:max-h-[360px] bg-zinc-950 overflow-hidden border-y border-[var(--border-subtle)] cursor-zoom-in group">
         <img
           src={activePhoto}
           alt={`Hazard at ${displayAddress}`}
@@ -126,23 +127,23 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
               e.stopPropagation();
               setShowProofPhoto(!showProofPhoto);
             }}
-            className="absolute top-3 right-3 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/20 text-white font-mono text-[11px] font-bold shadow-lg hover:bg-black transition-all flex items-center gap-1.5"
+            className="absolute top-2.5 right-2.5 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/20 text-white font-mono text-[11px] font-bold shadow-lg hover:bg-black active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <CheckCircle2 size={13} className="text-emerald-400" />
-            <span>{showProofPhoto ? 'Show Original Hazard' : 'Show Repaired Road'}</span>
+            <span>{showProofPhoto ? 'Show Pothole' : 'Show Repaired'}</span>
           </button>
         )}
 
-        {/* Bottom Citizen Badge */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-          <div className="backdrop-blur-md bg-black/75 border border-white/10 text-white px-3 py-1.5 rounded-lg font-mono text-[11px] flex items-center gap-2 shadow-lg">
-            <span className="text-[#F7D10C] font-bold">Verified Hazard</span>
+        {/* Bottom Citizen Info Badge */}
+        <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
+          <div className="backdrop-blur-md bg-black/80 border border-white/10 text-white px-2.5 py-1 rounded-lg font-mono text-[10px] sm:text-[11px] flex items-center gap-1.5 shadow-lg">
+            <span className="text-[#F7D10C] font-bold">Verified</span>
             <span className="text-zinc-500">•</span>
             <span>~{report.estimated_diameter_cm || 30}cm</span>
             {report.ward && (
               <>
                 <span className="text-zinc-500">•</span>
-                <span className="text-zinc-300 truncate max-w-[160px]">{report.ward}</span>
+                <span className="text-zinc-300 truncate max-w-[140px]">{report.ward}</span>
               </>
             )}
           </div>
@@ -150,12 +151,12 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
       </div>
 
       {/* Body: Location, Progress & Community Confirmation */}
-      <div className="p-4 sm:p-5 space-y-4">
-        {/* Address & Google Maps Link */}
-        <div className="flex items-start justify-between gap-3 text-xs">
+      <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4">
+        {/* Address & One-Tap Google Maps Directions Chip */}
+        <div className="flex items-start justify-between gap-2.5 text-xs">
           <div className="flex items-start gap-1.5 min-w-0">
             <MapPin size={14} className="text-[#F7D10C] shrink-0 mt-0.5" />
-            <span className="font-semibold text-[var(--text-primary)] leading-snug">
+            <span className="font-semibold text-[var(--text-primary)] leading-snug line-clamp-2">
               {displayAddress}
             </span>
           </div>
@@ -164,16 +165,17 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
             href={googleMapsUrl(report.latitude, report.longitude)}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[11px] text-[var(--text-secondary)] hover:text-[#F7D10C] shrink-0 flex items-center gap-1 transition-colors"
-            title="Open in Google Maps"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[11px] font-mono text-[var(--text-secondary)] hover:text-[#F7D10C] active:scale-95 shrink-0 transition-all"
+            title="Open directions in Google Maps"
           >
-            <span>View Map</span>
-            <ExternalLink size={11} />
+            <Navigation size={11} className="text-[#F7D10C]" />
+            <span>Directions</span>
+            <ExternalLink size={10} />
           </a>
         </div>
 
         {/* Citizen Repair Timeline */}
-        <div className="space-y-1.5 pt-1">
+        <div className="space-y-1.5 pt-0.5">
           <div className="flex items-center justify-between font-mono text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
             <span>REPAIR PROGRESS</span>
             <span className={isRepaired ? 'text-emerald-500 font-bold' : 'text-[#F7D10C] font-bold'}>
@@ -181,7 +183,7 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-4 gap-1 sm:gap-1.5">
             {/* Step 1: Reported */}
             <div className="space-y-1">
               <div className="h-1.5 rounded-full bg-[#F7D10C]" />
@@ -245,31 +247,31 @@ export default function ReportCard({ report, onUpvote, hasVoted, onZoomImage }: 
           </div>
         )}
 
-        {/* Action Footer: Upvote & Share */}
+        {/* Action Footer: Easy-tap Upvote & Share (Minimum 44px touch targets) */}
         <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => onUpvote?.(report.id)}
             disabled={hasVoted}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer ${
+            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold font-mono flex items-center gap-2 select-none active:scale-[0.98] transition-transform cursor-pointer ${
               hasVoted
                 ? 'bg-[#F7D10C] text-[#09090b] shadow-sm cursor-default'
-                : 'bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-primary)] border border-[var(--border-subtle)] active:scale-95'
+                : 'bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-primary)] border border-[var(--border-subtle)]'
             }`}
           >
-            <ThumbsUp size={13} className={hasVoted ? 'fill-current' : ''} />
+            <ThumbsUp size={14} className={hasVoted ? 'fill-current' : ''} />
             <span>{hasVoted ? 'Confirmed' : '+1 Confirm Hazard'}</span>
-            <span className="opacity-75">({report.upvotes || 0})</span>
+            <span className="opacity-80 font-normal">({report.upvotes || 0})</span>
           </button>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleShare}
-              className="p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-elevated-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center select-none active:scale-95 transition-all cursor-pointer"
               title="Share Incident"
             >
-              <Share2 size={14} />
+              <Share2 size={15} />
             </button>
             {sharedToast && (
               <span className="font-mono text-[10px] text-[#F7D10C] animate-fade-in">

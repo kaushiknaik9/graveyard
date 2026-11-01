@@ -19,6 +19,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
   themeColor: '#09090b',
 };
 
@@ -29,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" data-theme="dark" suppressHydrationWarning>
-      <body className="bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased min-h-screen selection:bg-[#F7D10C] selection:text-black">
+      <body className="bg-[var(--bg-canvas)] text-[var(--text-primary)] antialiased min-h-screen selection:bg-[#F7D10C] selection:text-black pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <ThemeProvider>
           <AuthProvider>
             <div className="min-h-screen flex flex-col bg-[var(--bg-canvas)]">

@@ -325,21 +325,43 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Fullscreen Submission Radar Overlay ── */}
+      {/* ── Mobile-Optimized Submission Radar Drawer / Overlay ── */}
       {isSubmitting && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center animate-fade-in p-6">
-          <div className="text-center max-w-sm">
-            <div className="relative w-20 h-20 mx-auto mb-5">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center animate-fade-in p-0 sm:p-4 pb-[env(safe-area-inset-bottom)]">
+          <div className="w-full sm:max-w-md bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-t-3xl sm:rounded-2xl p-6 text-center space-y-4 shadow-2xl animate-slide-up">
+            {/* Radar Sensor Animation */}
+            <div className="relative w-18 h-18 mx-auto">
               <div className="absolute inset-0 rounded-full border-2 border-[#F7D10C]/20" />
               <div className="absolute inset-0 rounded-full border-t-2 border-[#F7D10C] animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <Sparkles size={22} className="text-[#F7D10C] animate-pulse" />
               </div>
             </div>
-            <h3 className="text-sm font-bold text-white mb-1.5 font-mono">VERIFYING ROAD HAZARD</h3>
-            <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-              {submissionStep}
-            </p>
+
+            <div>
+              <h3 className="text-sm font-extrabold text-[var(--text-primary)] font-mono tracking-wider uppercase">
+                ANALYZING ROAD TELEMETRY
+              </h3>
+              <p className="text-xs text-[var(--text-secondary)] font-medium mt-1 leading-relaxed">
+                {submissionStep}
+              </p>
+            </div>
+
+            {/* 3-Step Live Processing Stepper */}
+            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-[var(--border-subtle)] text-[10px] font-mono">
+              <div className="space-y-1">
+                <div className="h-1 rounded-full bg-[#F7D10C]" />
+                <span className="text-[var(--text-primary)]">1. GPS Lock</span>
+              </div>
+              <div className="space-y-1">
+                <div className="h-1 rounded-full bg-[#F7D10C] animate-pulse" />
+                <span className="text-[#F7D10C] font-bold">2. AI Vision</span>
+              </div>
+              <div className="space-y-1">
+                <div className="h-1 rounded-full bg-[var(--border-subtle)]" />
+                <span className="text-[var(--text-muted)]">3. Ward Dispatch</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -470,15 +492,15 @@ export default function Home() {
         {/* ============================================================== */}
         {/* COLUMN 2: CENTER FEED & MAP VIEWPORT (col-span-6)              */}
         {/* ============================================================== */}
-        <main className="col-span-1 lg:col-span-6 border-r border-[var(--border-subtle)] min-h-screen flex flex-col">
+        <main className="col-span-1 lg:col-span-6 border-r border-[var(--border-subtle)] min-h-screen flex flex-col pb-24 lg:pb-8">
           {/* Sticky Sub-Header: Segmented View Switcher & Filter Chips */}
-          <div className="sticky top-16 z-20 backdrop-blur-xl bg-[var(--bg-canvas)]/85 border-b border-[var(--border-subtle)] px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div className="sticky top-14 sm:top-16 z-20 backdrop-blur-xl bg-[var(--bg-canvas)]/90 border-b border-[var(--border-subtle)] px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2.5">
             {/* Sliding Pill View Switcher */}
-            <div className="flex p-0.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] font-mono text-xs">
+            <div className="flex p-0.5 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] font-mono text-xs select-none">
               <button
                 type="button"
                 onClick={() => setViewMode('feed')}
-                className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                className={`min-h-[36px] sm:min-h-[32px] px-3 sm:px-3.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                   viewMode === 'feed'
                     ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
@@ -489,18 +511,18 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setViewMode('map')}
-                className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                className={`min-h-[36px] sm:min-h-[32px] px-3 sm:px-3.5 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                   viewMode === 'map'
                     ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                Live Radar Map
+                Radar Map
               </button>
             </div>
 
             {/* Severity Filter Chips */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs font-mono">
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-xs font-mono select-none">
               {(
                 [
                   { id: 'all', label: 'All' },
@@ -513,10 +535,10 @@ export default function Home() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveFilter(tab.id)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer ${
+                  className={`min-h-[36px] sm:min-h-[32px] px-2.5 sm:px-3 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     activeFilter === tab.id
                       ? 'bg-[var(--text-primary)] text-[var(--bg-canvas)] font-bold'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--bg-elevated)] border border-[var(--border-subtle)] active:scale-95'
                   }`}
                 >
                   {tab.label}
@@ -677,6 +699,75 @@ export default function Home() {
           </div>
         </aside>
       </div>
+
+      {/* ── Fixed Mobile Bottom Navigation Bar (<1024px) ── */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-[var(--bg-surface)]/95 dark:bg-[#09090b]/95 backdrop-blur-xl border-t border-[var(--border-subtle)] z-40 flex items-center justify-around px-4 pb-[env(safe-area-inset-bottom)] select-none">
+        {/* Tab 1: Live Feed */}
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode('feed');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-all cursor-pointer ${
+            viewMode === 'feed'
+              ? 'text-[var(--text-primary)] font-bold'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          <LayoutGrid size={18} className={viewMode === 'feed' ? 'text-[#F7D10C]' : ''} />
+          <span className="font-mono text-[10px]">Feed</span>
+        </button>
+
+        {/* Tab 2: Map Radar */}
+        <button
+          type="button"
+          onClick={() => {
+            setViewMode('map');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className={`flex flex-col items-center justify-center gap-1 w-16 h-full transition-all cursor-pointer ${
+            viewMode === 'map'
+              ? 'text-[var(--text-primary)] font-bold'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+          }`}
+        >
+          <Map size={18} className={viewMode === 'map' ? 'text-[#F7D10C]' : ''} />
+          <span className="font-mono text-[10px]">Radar</span>
+        </button>
+
+        {/* Center CTA: Snap Road Hazard (Citizens only) */}
+        {role === 'citizen' && (
+          <button
+            type="button"
+            onClick={() => setIsCameraModalOpen(true)}
+            className="w-12 h-12 rounded-full bg-[#F7D10C] text-[#09090b] flex items-center justify-center shadow-lg -translate-y-2.5 active:scale-90 transition-transform cursor-pointer border-2 border-[var(--bg-canvas)] shrink-0"
+            title="Snap Road Hazard"
+          >
+            <Camera size={22} strokeWidth={2.5} />
+          </button>
+        )}
+
+        {/* Tab 3: Gov Desk or User Profile */}
+        {role === 'gov' ? (
+          <Link
+            href="/gov"
+            className="flex flex-col items-center justify-center gap-1 w-16 h-full text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+          >
+            <Building2 size={18} className="text-[#F7D10C]" />
+            <span className="font-mono text-[10px]">Gov Desk</span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="flex flex-col items-center justify-center gap-1 w-16 h-full text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+          >
+            <UserIcon size={18} />
+            <span className="font-mono text-[10px]">Citizen</span>
+          </button>
+        )}
+      </nav>
 
       {/* ── Camera Capture Modal ── */}
       <CameraCaptureModal
